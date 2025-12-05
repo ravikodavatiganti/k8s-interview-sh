@@ -1,0 +1,133 @@
+1. How did you deploy AKS Cluster?
+A: Using Terraform AKS Module along with Network and Resource Group Modules. 
+
+2. Where are you saving your images in Azure?
+A: We are saving the images in Azure Container Registry(ACR).
+
+3. How AKS Cluster acecss the images from ACR?
+A: While creating clsuter we use attach the ACR to the AKS Cluster. The AKS CLuster uses Managed Identity to access the images from ACR.
+
+4. How AKS Cluster access Azure Resources?
+A: While creating cluster we will enable managed Identity for the AKS Cluster. We can assign the required permissions to the managed Identity to access the Azure Resources like Disk, KeyVault, etc.
+
+5. What are Pools in AKS Cluster (or) What resources are deployed when creating AKS Cluster?
+A: We can it as node pools. When we create AKS Cluster, it will create a Node Pool with the required number of nodes. We can add additional node pools with different configurations.
+
+Two types of Node Pools:
+- System Node Pool: This is the default node pool that is created when the AKS Cluster is created. This is used to run the system pods like coredns, kube-proxy, csi-drivers, etc.
+
+- User Node Pool: This is the additional node pool that can be created with the required configuration. We can add multiple user node pools with different configurations. We can have multiple user node pools with different configurations.
+
+6. I have an application where I want to deploy the frontend in one node pool and backend in another node pool. How can I do that?
+A: We can do it in different ways:
+- NodeSelectors
+- Taints and Tolerations
+- Node Affinity
+
+7. How can I scale the AKS Cluster?
+A: We can perform both manual and auto scaling of the AKS Cluster. We can scale the node pools based on the CPU and Memory utilization.
+VMSS will be used to scale the nodes in the AKS Cluster max of 1000 nodes.
+
+8. How can I monitor the AKS Cluster?
+A: We can use Azure Monitor to monitor the AKS Cluster. We can monitor the performance, logs, and metrics of the AKS Cluster.
+We can also use prometheus and grafana to monitor the AKS Cluster.
+
+9. How can I enable logging in AKS Cluster?
+A: We can enable the logging in AKS Cluster using the Azure Monitor. We can enable the logs for the API Server, Audit, Authenticator, Controller Manager, Scheduler, and all the components.
+
+10. How can I upgrade the AKS Cluster?
+A: We can upgarde using Portal or Terraform or CLI. We can perform both Control Plane and Node Pool upgrades at the same time or separately.
+
+During the upgarde, AKS will drain the nodes one by one and create new nodes with the new version.
+
+11. What are the ingress options available in AKS Cluster?
+A: We can use the following options for Ingress in AKS Cluster:
+- Nginx Ingress Controller or Traefik or any 3rd party Ingress Controller.
+- Azure Application Gateway as a Ingress Controller.
+
+12. What exactly is deployed with Application Gateway Ingress Controller?
+A: It will deploy a POD named as AGIC(Azure Gateway Ingress Controller) in the AKS Cluster. This POD will be used to route the traffic to the backend services. 
+When every you create a Ingress Resource, AGIC will create a corresponding configuration in the Application Gateway. Based on the Ingress Config it will deploy listeners, rules, and backend pools in the Application Gateway.
+The listener can be both HTTP and HTTPS along with https redirection is done automatically.
+
+13. How can I enable SSL in AKS Cluster?
+A: We can enable SSL in AKS Cluster using the Ingress Controller. We can use the Ingress Resource to enable SSL in AKS Cluster. It can be nginx or Application Gateway Ingress Controller.
+
+14. What are the Container Networking Options available in AKS Cluster?
+A: We can use the following options for Container Networking in AKS Cluster:
+- Azure CNI(Container Networking Interface)
+- Kubenet
+
+15. What is the recomanded Container Networking Interface in AKS Cluster?
+A: Azure CNI is the recomanded Container Networking Interface in AKS Cluster. It will create a VNET and Subnet in the AKS Cluster. Each POD will get an IP from the Subnet. It will provide better performance and security.
+
+Only Azure CNI supports Network Policies, Windows Worker Nodes, and Azure Policy, Virtual Node.
+
+16. How to connect to AKS Cluster?
+A: We can connect to AKS Cluster using the following ways:
+From Portal, use connect option to get the command to connect to the AKS Cluster.
+From CLI, use az aks get-credentials --name <cluster-name> --resource-group <resource-group-name>
+From Terraform, use the output to get the kubeconfig file.
+
+17. How do you integrate AKS Cluster with Azure DevOps?
+A: We can change our strategy based on where the Azure DevOps agent is running:
+If the agent is running in the Azure as a self-hosted agent ruuning as Azure VM, we can use the Managed Identity to access the AKS Cluster.
+
+IF the agent is running outside the Azure, we can use the Service Connection to access the AKS Cluster which needs kubeconfig file.
+
+18. How to map Azure Entra ID Users to AKS Cluster?
+A: We can use Azure AD Pod Identity to map the Azure AD Users to AKS Cluster. We can assign the required permissions to the Azure AD Users to access the AKS Cluster.
+
+19. What is Azure Pod Identity?
+A: Azure Pod Identity is a project that enables Kubernetes applications to access cloud resources securely with Azure Active Directory. It enables applications running in a Kubernetes cluster to authenticate to cloud services using managed identities.
+
+When you enable pod-managed identity on your AKS cluster, an AzurePodIdentityException named aks-addon-exception is added to the kube-system namespace. 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo
+  labels:
+    aadpodidbinding: $POD_IDENTITY_NAME
+
+20. How to enable Azure Pod Identity in AKS Cluster?
+A: We can enable Azure Pod Identity in AKS Cluster using the following steps:
+- Install the Azure Pod Identity Operator in the AKS Cluster.
+- Create AzureIdentity and AzureIdentityBinding to map the Azure AD Users to the AKS Cluster.
+- Create AzureAssignedIdentity to assign the AzureIdentity to the POD.
+
+21. How can change garbage collection settings in AKS Cluster (or)
+How can limit max PODs in each node in AKS Cluster? (or)
+How can I limitn LogSize for each POD in AKS Cluster?
+A: This can be achived using custom node definition in AKS Cluster. We can use the custom node definition to change the garbage collection settings, limit the max PODs in each node, and limit the LogSize for each POD.
+
+aks-custom-node-definition.json
+{
+    "imageGcHighThreshold": 90,
+    "imageGcLowThreshold": 70,
+    "podMaxPids": 2,
+    "containerLogMaxSizeMB": 5
+}
+--kubelet-config aks-custom-node-definition.json
+https://learn.microsoft.com/en-us/azure/aks/custom-node-configuration?tabs=linux-node-pools
+
+22. What are virtual nodes in AKS Cluster?
+A: Virtual Nodes are the extension of the AKS Cluster. It will create a virtual kubelet in the AKS Cluster. It will use the ACI(Azure Container Instances) to run the PODs. It will be used to run the PODs which are not required to run all the time.
+
+23. How to integrate keyvault with AKS Cluster?
+A: Key Vault add-on for Azure Kubernetes Service (AKS) makes it easy to use Azure Key Vault to store and manage sensitive information in AKS applications. The add-on is a managed service that simplifies the deployment and management of the Key Vault provider for Secrets Store CSI Driver.
+
+It uses AKS Managed Identity to access the Key Vault. We can assign the required permissions to the Managed Identity to access the Key Vault.
+
+24. How to enable Azure Policy in AKS Cluster?
+A: We can enable Azure Policy in AKS Cluster using the following steps:
+- Install the Azure Policy Addon in the AKS Cluster.
+- Create the Azure Policy Definitions and Assignments to enforce the policies in the AKS Cluster.
+
+25. What are the servicemes in AKS Cluster?
+A: AKS Supports two types of services:
+- Istio
+- Open Service Mesh
+
+
+

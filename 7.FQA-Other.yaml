@@ -1,0 +1,5 @@
+1. What is a JOB in Kubernetes?
+A: Job is used to run the pods to completion. Once the pods are completed, the job is completed. If the pods are failed, the job will be restarted. If the pods are completed successfully, the job will not be restarted. Job are use full to run the batch jobs, cron jobs etc. like backup, restore, database migration etc.
+
+2. What is a CronJob in Kubernetes?
+A: CronJob is used to run the pods at the specific time or at the specific intervals. It is like a cron job in the linux. We can define the schedule in the cron format. CronJob is used to run the batch jobs, cron jobs etc. like backup, restore, database migration etc.

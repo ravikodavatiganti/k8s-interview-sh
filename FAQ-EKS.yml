@@ -1,0 +1,146 @@
+1. Have you worked on AWS EKS?
+A: Yes, most of our microservices based applications are deployed on AWS EKS. We have multiple clusters for different environments like Dev, QA, and Prod.
+
+2. What are the ways to deploy AWS EKS?
+A:
+- Using AWS Management Console.
+- Using eksctl CLI.
+- Using Terraform.
+
+3. How are you deploying EKS CLuster with Terraform?
+A: We have modularized the Terraform code to deploy the EKS cluster. We have created the following modules:
+- VPC Module for VPC, Public and Private Subnets & NAT Gateways.
+- EKS Module for EKS Cluster, Nodegroup, and IAM Roles.
+
+4. What are the add-ons you are using in EKS Cluster?
+A: Following add-ons are installed in the EKS Cluster:
+- vpc-cni
+- kube-proxy
+- CoreDNS
+- aws-ebs-csi-driver
+- eks-pod-identity-agent #This allows the pods to assume the IAM role by mapping the service account to the IAM role.
+- aws-efs-csi-driver
+- secret-manager-csi-driver #Helm Chart
+- Amazon GuardDuty EKS Runtime Monitoring
+- Amazon CloudWatch Observability
+
+5. Can I add additional add-ons to the EKS Cluster?
+A: Yes, we can add additional add-ons to the EKS Cluster from the AWS Management Console or eksctl CLI or helm charts.
+
+6. How can I access secrets from AWS Secrets Manager in the EKS Cluster?
+A: We can use the AWS Secrets Manager CSI Driver to access the secrets from AWS Secrets Manager in the EKS Cluster. We need to create a secret resource in the Kubernetes cluster and map it to the secret in the AWS Secrets Manager. 
+We can install it helm chart.
+
+7. What is a Private Cluster in EKS?
+A: Private Cluster is a cluster where the control plane is not exposed to the internet. The control plane is accessible only from the VPC where the EKS Cluster is deployed. The worker nodes can communicate with the control plane using the private IP Address.
+Private Subnets are used to deploy the EKS Cluster.
+
+8. Can we convert the existing EKS Cluster to a Private Cluster?
+A: No, we cannot convert the existing EKS Cluster to a Private Cluster. We need to create a new EKS Cluster with the Private Subnets to make it a Private Cluster.
+
+9. Can we restrict API Access to certain IP Addresses in EKS?
+A: Yes, we can do that from AWS Console -> EKS -> Cluster -> Networking -> Manage Endpoint Access. We can restrict the API Access to certain IP Addresses. Choose Public and private and allow the IP Address.
+
+10. How can I assign a IAM Role Mapping to POD in EKS?
+A: First the pod identity addon should be installed in the EKS Cluster which is a daemonset. It will be running as eks-pod-identity-agent.
+Then we need to create a IAM Role and IAM Role Policy. 
+Under AWS Console -> EKS -> Cluster -> Access -> Pod Identity associations -> Create Pod Identity Assosiation. We can map the IAM Role to the Service Account.
+
+We can select the namespace and service account and map the IAM Role.
+
+11. I want to map a IAM Role to a POD in JavaApp Namespace. How can I do that?
+A: Under AWS Console -> EKS -> Cluster -> Access -> Pod Identity associations -> Create Pod Identity Assosiation. We can map the IAM Role to the Service Account. Here we have option to select the namespace and service account and map the IAM Role.
+
+12. How can I use AWS Application Load Balancer(ALB) as Ingress Controller in EKS?
+A: We need use helm chat to deploy AWS Load Balancer Controller in the EKS Cluster. 
+While Deploying the Ingress Resource we need to specify the annotation to use the ALB as Ingress Controller.
+spec:
+  ingressClassName: alb
+This will create a ALB for every Ingress Resource.
+
+13. How can I download Images from ECR in EKS Cluster?
+A: The nodes in the EKS Cluster should have the IAM Role with the permission to download the images from ECR. We can use the IAM Role for Service Account to download the images from ECR.
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:BatchGetImage",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:GetAuthorizationToken"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+14. How do you monitor the EKS Cluster?
+A: We use Prometheus and Grafana for monitoring the EKS Cluster. We have deployed the Prometheus Operator and Grafana in the EKS Cluster. We have created the dashboards to monitor the EKS Cluster.
+
+15. What are the EKS Metrics you are monitoring using Prometheus?
+A: We are monitoring the following EKS Metrics using Prometheus:
+- CPU Utilization
+- Memory Utilization
+- Disk Utilization
+- Network Utilization
+- EKS Control Plane Metrics
+- POD Metrics
+- POD Container Metrics
+
+Grafana is used to visualize the metrics.
+
+17. I have a user who need access to the EKS Cluster. How can I provide access?
+A: You need to aws_auth ConfigMap in the kube-system namespace. You need to add the user ARN to the ConfigMap. The user should have the permission to access the EKS Cluster.
+
+apiVersion: v1
+data:
+  mapRoles: |
+    - groups:
+      - system:bootstrappers
+      - system:nodes
+      rolearn: arn:aws:iam::009412611595:role/eksctl-k8sb30-cluster-01-nodegroup-NodeInstanceRole-5nBBOuK48sWk
+      username: system:node:{{EC2PrivateDNSName}}
+  mapUsers: |
+    - userarn: arn:aws:iam::009412611595:user/eksadmin
+      username: eksadmin
+      groups:
+      - system:masters
+kind: ConfigMap
+metadata:
+  name: aws-auth
+  namespace: kube-system
+
+DONT EDIT THE CONFIGMAP. Perform echo ' ' | kubectl apply -f - of above code.
+
+18. How do you enable logging in EKS Cluster?
+A: AWS Console -> EKS -> Cluster -> Observability -> Enable Control Plane Logging. We can enable the logging for API Server, Audit, Authenticator, Controller Manager, Scheduler, and all the components.
+
+19. How do you upgrade the EKS Cluster?
+A: We can upgrade the EKS Cluster using the eksctl CLI. We need to run the following command to upgrade the EKS Cluster:
+From Console we can upgrade the EKS Cluster.
+eksctl upgrade cluster --name=k8sb30-cluster-01 --region=us-west-2 --approve
+It is also possible to upgrade the EKS Cluster using Terraform by changing the version in the Terraform code.
+
+20. How EKS Upgarde Process works?
+A: The EKS Upgrade Process will upgrade the control plane and the worker nodes. The control plane upgrade will be done first and then the worker nodes will be upgraded. The worker nodes will be drained and the new worker nodes will be created with the new version.
+
+We need to make sure multiple PODs are running for every deployment to avoid downtime as EKS perform upgarde of worker nodes one by one.
+
+21. How do you take the backup of EKS Cluster?
+A: We can take the backup of the EKS Cluster using the EKSCTL CLI. We can run the following command to take the backup of the EKS Cluster:
+eksctl create backup --name=k8sb30-cluster-01 --region=us-west-2
+
+22. I want to deploy my PODs to a specific nodegroup in EKS. How can I do that?
+A: Multiple Ways:
+- Using Node Selector in the POD Spec.
+- Using Node Affinity in the POD using NodeGroup.
+- Using Taints and Tolerations in the Nodegroup.
+
+23. How to access RDS or DynamoDB from EKS Cluster?
+A: We can use the IAM Role for Service Account to access the RDS or DynamoDB from the EKS Cluster. We also need VPC Endpoint to access the RDS or DynamoDB from the EKS Cluster internally.
+
+24. How to create VPC Endpoint in EKS Cluster?
+A: We can create the VPC Endpoint in the EKS Cluster using the AWS Management Console. While creating select the EKS Subnets and the Security Group. This will allow the EKS Cluster to access the RDS or DynamoDB internally.
+

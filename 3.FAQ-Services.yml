@@ -1,0 +1,166 @@
+Services:
+1. What are the different types of services in Kubernetes?
+A: We have 5 types of services in Kubernetes:
+1. ClusterIP
+2. NodePort
+3. LoadBalancer
+4. Headless
+5. ExternalName
+
+2. What is a Service In Kubernetes?
+A: A Service acts like a load balancer for the pods. It will direct the traffic to the pods based on the labels.
+kubectl expose deployment app2 --name app2-cip --port 80 --type=ClusterIP
+kubectl expose deployment app2 --name app2-node --port 80 --type=NodePort
+kubectl expose deployment app2 --name app2-lb --port 80 --type=LoadBalancer
+
+3. How do I know the service is connected to the PODs?
+A: kubectl describe service app2
+Selector:  app=app2 #This is the label of the PODs used by the service.
+TargetPort: 80/TCP #Container/POD Port
+Endpoints: 100.107.180.68:80,100.114.249.68:80,100.107.180.67:80
+
+3. What is the diffrent between Labels and Annotations in Kubernetes?
+A: Labels are used to identify the objects in Kubernetes. For example, labels are used by Services to identify the pods. Annotations are used to store the metadata of the objects.
+
+Annotations are used to store the metadata of the objects. Add additional information to the objects. It is also used to enable the features in the objects.
+For example, aws nlb annotation is used to enable the NLB in the service.
+annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+
+4. What is the difference between ClusterIP and NodePort vs LoadBalancer?
+ClusterIP: It is used to expose the service inside the cluster. It is not accessible from outside the cluster. This is mostly used along with the Ingress controller to expose outside.
+
+NodePort: It is used to expose the service on the node's IP address. It is accessible from outside the cluster. It uses ports range 30000-32767. Its not used in production and very good option for testing.
+Eg: http://NODE_IP:30000
+
+LoadBalancer: It is used to expose the service on the cloud provider's load balancer. It is accessible from outside the cluster. It is used in production. But using seperate load balancer for each service is not recommended as it will be costly. But if the application has huge traffic then its recomanded to use LoadBalancer.
+
+5. How can I expose a deployment with multiple services (or) Can I use both cluster IP and NodePort at ther same time for a deployment?
+A: Yes, we can use both ClusterIP and NodePort at the same time for a deployment. We can create multiple services for the same deployment. For example, we can create a ClusterIP service to expose the service inside the cluster and NodePort service to expose the service outside the cluster.
+
+6. What is a Headless Service in Kubernetes?
+A: Headless service is used to disable the load balancing for the service, means when you perform nslookup it will give all IP Address of the PODs.
+
+kubectl expose deployment app2 --name app2-hl --port 80 --type=None
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: app2
+  name: app2-hless
+spec:
+  clusterIP: None
+  ports:
+  - port: 80
+  selector:
+    app: app2
+
+7. Why do you need a Headless Service in Kubernetes?
+A: Headless service is used by statefulsets to identify the IP Address of the PODs. Its needed when your use data. 
+Eg: Image mongodb Statefull which container mongo0, mongo1, mongo2. Here mongo0 is the primary and mongo1, mongo2 are the secondary. If mongo1 and mongo2 plan to become primary then they need to know the IP Address of the PODs. This is where Headless service comes into the picture.
+
+8. What is an Ingress Controller in Kubernetes?
+A: Ingress controller is used to expose the services outside the cluster. It is used to route the traffic to the services based on the rules defined in the Ingress resource. The components of the Ingress controller are Ingress, Ingress Controller, Ingress Resource, Ingress Class, Ingress Rules and the service which ingress route.
+
+Ingress controller use single LoadBalancer to route the traffic to the multiple services which will save cost.
+
+9. What are the different types of Ingress Controllers?
+A: Cloud Native Ingress Controllers:
+   1. AWS Load Balancer Controller on EKS.
+   2. Azure Application Gateway Ingress Controller on AKS.
+   3. NgInx Ingress Controller.
+   4. Traefik Ingress Controller.
+All the Ingress Controller deployed as a POD in the cluster.
+
+10. What ingress controller can do?
+A: SSL/TLS Termination and redirection.
+Path-based routing.
+Route Traffic based on the Hostname/Domain to backend services.
+
+11. What is the difference between Ingress and Ingress Controller?
+A: Ingress is a resource in Kubernetes which is used to define the rules to route the traffic to the services. Ingress Controller is a component in Kubernetes which is used to implement the rules defined in the Ingress resource which is a POD.
+
+12. How do you deploy Ingress Controller in Kubernetes?
+A: We can deploy it in multiple ways:
+- Using Helm Chart.
+- Using YAML file with kubectl apply -f file.yml
+
+13. Wich namespace should I deploy the Ingress Controller?
+A: It is recommended to deploy the Ingress Controller in the kube-system namespace. Nginx Ingress Controller is deployed in the ingress-nginx namespace.
+
+Ingress Resource can be deployed in any namespace. You need to make  sure the TLS/SSL certificate is available in the same namespace where the Ingress resource is deployed.
+
+Placement Constraints for PODs:
+1. How can I control the placement of the PODs in the cluster?
+- Node Selector
+- Node Affinity
+- Taints and Tolerations
+- POD Affinity and Anti-Affinity
+
+
+2. What is Node Selector in Kubernetes?
+A: Node Selector is used to deploy the PODs in the specific node. We can use the nodeSelector field in the POD spec to deploy the POD in the specific node.
+nodeSelector:
+  kubernetes.io/hostname: i-04902c10928382c11
+
+3. I have 3 nodepool in the cluster. How can I deploy the PODs in the specific nodepool?
+A: Node Affinity is used to deploy the PODs in the specific nodepool. We can use the nodeAffinity field in the POD spec to deploy the POD in the specific nodepool.
+- RequiredDuringSchedulingIgnoredDuringExecution
+  Pods will be scheduled on the nodes that satisfy the node affinity requirements. They will go unscheduled if no nodes match the requirements and resources are not available.
+
+- PreferredDuringSchedulingIgnoredDuringExecution
+  Pods will be scheduled on the nodes that satisfy the node affinity requirements if they are available. If the requirements are not met, if will try to deploy on other nodes.
+
+requiredDuringSchedulingIgnoredDuringExecution:
+  nodeSelectorTerms:
+  - matchExpressions:
+    - key: nodepool
+      operator: In
+      values:
+      - nodepool1
+
+preferredDuringSchedulingIgnoredDuringExecution:
+  nodeSelectorTerms:
+  - matchExpressions:
+    - key: nodepool
+      operator: In
+      values:
+      - nodepool1
+
+4. What will happen if I dont give Node Affinity and deploy the PODs?
+A: If you dont give Node Affinity, then the PODs will be deployed in any node in the cluster. It will be deployed in the node where the resources are available.
+
+5. I have a 10 nodes in which 2 nodes are very high configuration. I dont want PODs should be deploy to the 2 nodes by default. How can I achieve this?
+A: Taints and Tolerations is used to prevent the PODs from deploying to the specific nodes. We can use the taints field in the node spec to taint the node and tolerations field in the POD spec to tolerate the taints.
+
+Taints are applied to the nodes and Tolerations are applied to the PODs.
+kubectl tainted node node1 key=value:NoSchedule
+kubectl tainted node node2 key=value:NoExecute
+
+6. What is the difference between NoSchedule and NoExecute in Taints?
+A: NoSchedule: PODs will not be scheduled on the nodes which have the taints. If the PODs are already running on the nodes, then the PODs will not be evicted from the nodes.
+NoExecute: PODs will not be scheduled on the nodes which have the taints. If the PODs are already running on the nodes, then the PODs will be evicted from the nodes.
+
+7. Give me a usecase of Taints and Tolerations?
+A: By default the application pod dont deploy on the master node. This is because of a tainted the master node. This is to prevent the application pod from deploying on the master node.
+Taints: node-role.kubernetes.io/control-plane:NoSchedule
+
+8. Where can I use POD Affinity and Anti-Affinity?
+A: Image I have a 3-tier app as below:
+frontend = 3 PODs
+backend = 3 PODs
+db = 3 PODs
+4 Nodes in the cluster.
+We use POD Anti-Affinity to make sure the PODs are not deployed on the same node. This is to make sure the application is highly available.
+But I need one pod from each tier should be deployed on the same node. This is where POD Affinity comes into the picture.
+
+Cluster Upgrade:
+Where is ur clusetr hosted:
+- EKS, GKE, AKS => Update version in the console or Terraform. It will update control plane and worker nodes by replaceing worker nodes.
+Also provide plugins version in the terraform script.
+vpc cni plugin version
+pod identity version
+csi driver version
+
+- Self Managed Cluster => Update the version in the kubeadm config file and run the kubeadm upgrade command. It will update the control plane and worker nodes.
+KOPS upgrade the cluster version and node version.

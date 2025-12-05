@@ -1,0 +1,56 @@
+1.What is GitOps?
+A: GitOps is a way to do Kubernetes cluster management and application delivery. It works by using Git as a single source of truth for declarative infrastructure and applications. With Git at the center of your delivery pipelines, developers can make pull requests to accelerate and simplify application deployments and operations tasks to Kubernetes.
+
+2. Whatis the difference between GitOps and CI/CD?
+A: GitOps will remove the deployment process from CI/CD pipelines and instead use a Git repository as the source of truth for the desired state of the system. CI/CD pipelines will be used to build and test the application, but the deployment process will be managed by a GitOps tool.
+
+3. What are different GitOps tools?
+A: Some of the popular GitOps tools are:
+   - ArgoCD
+   - Flux
+   - JenkinsX
+   - Gitkube
+   - Weave Flux
+   - Spinnaker
+
+4. What is difference between ArgoCD and Flux?
+A: ArgoCD and Flux are both GitOps tools that help you manage your Kubernetes cluster using Git. The main difference between the two is that ArgoCD is more focused on deploying applications to Kubernetes, while Flux is more focused on managing the cluster itself. 
+Using ArgoCD we can manae multiple clusters and applications, while Flux is more focused on managing a single cluster.
+
+5. How ArgoCD detect changes in Git repository?
+A: Git Webhooks are used to detect changes in the Git repository. ArgoCD can be configured to listen for changes in a Git repository and automatically sync the changes to the Kubernetes cluster.
+https://<argocd-service-url>/api/webhook
+
+6. Does ArgoCD works without Webhooks?
+A: Yes, ArgoCD can work without Webhooks. You can manually sync the changes from the Git repository to the Kubernetes cluster using the ArgoCD UI or CLI.
+ArgoCD sync the changes every 3 minutes by default.
+
+7. What are the ways we can deploy applications using ArgoCD?
+A: There are multiple ways to deploy applications using ArgoCD:
+   - Using Git repository
+   - Using Helm charts
+
+8. How to handle multiple projects in ArgoCD?
+A: In ArgoCD, you can create multiple Applications to manage different projects. Each Application can be configured to deploy a specific set of resources to a Kubernetes cluster.
+
+9. What is the difference between ArgoCD Application and Project?
+A: In ArgoCD, an Application is a set of Kubernetes resources that are deployed to a cluster. A Project is a way to group Applications together and apply policies to them. For example, you can use Projects to define who has access to deploy Applications in a cluster.
+
+Echo project can be used to group multiple applications together.
+
+10. What is prune in ArgoCD?
+A: Prune is a feature in ArgoCD that allows you to delete resources from a Kubernetes cluster that are not defined in the Git repository. This helps to keep the cluster in sync with the desired state defined in the Git repository.
+For example, if you delete a resource from the Git repository, ArgoCD will automatically delete the resource from the cluster. This should be enabled with caution with --auto-prune flag.
+
+11. What is self-heal in ArgoCD?
+A: By default, changes that are made to the live cluster will not trigger automated sync. Self-heal is a feature in ArgoCD that automatically detects and corrects any drift between the desired state defined in the Git repository and the actual state of the cluster. If a resource is deleted or modified in the cluster, ArgoCD will automatically sync the changes to bring the cluster back to the desired state.
+
+12. Can i manually sync the changes in ArgoCD?
+A: Yes, you can manually sync the changes in ArgoCD using the ArgoCD UI or CLI. This can be useful when you want to deploy changes immediately without waiting for the automated sync. You can also perform rollbacks and other operations using the ArgoCD UI or CLI.
+
+
+
+
+
+
+

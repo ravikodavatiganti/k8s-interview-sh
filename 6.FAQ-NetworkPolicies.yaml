@@ -1,0 +1,70 @@
+1. Does pods in different namespaces can communicate with each other?
+A: Using IP Adress they can communicate with each other. I general we need to service to communicate between the applications in the different namespaces.
+Namespace is not a network boundary. It is a logical boundary to organize the resources in the cluster. By default it dont have any network isolation.
+
+2. How can restrict the communication between the PODs in the same & different 
+namespaces?
+A: We can restrict the communication between the PODs in the same & different namespaces using the Network Policies. Network Policies are used to control the traffic between the PODs in the cluster. It is like a firewall for the PODs in the cluster.
+
+Network Policies works based on labels. We need to define the labels in the POD spec and define the labels in the Network Policy spec. We can define the rules to allow or deny the traffic between the PODs.
+
+#Block both Ingress & Egress for default Namespace.
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: deny-all-traffic-to-default
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  
+#This Policy Will Allow Traffic Between PODs in Alpha NS with Label 
+#ns=alpha
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-traffic-within-alpha-namespace
+  namespace: alpha
+spec:
+  podSelector: 
+   matchLabels:
+    ns: alpha
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          ns: alpha
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          ns: alpha
+
+#Allow Ingress Traffic From Bravo To Alpha applied at Alpha Namespace
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-traffic-from-bravo-to-alpha
+  namespace: alpha
+spec:
+  podSelector: 
+   matchLabels:
+    ns: alpha
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          nsp: bravo
+    - podSelector:
+        matchLabels:
+          ns: bravo

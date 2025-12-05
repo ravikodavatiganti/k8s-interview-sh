@@ -1,0 +1,109 @@
+1. What are the diffrent types of Autoscaling in Kubernetes?
+A: We have 2 types of Autoscaling in Kubernetes:
+- Cluster Level to Add and Remove Worker Nodes automatically based on the load.
+  - AWS -> AutoScaling Group but latest one is Karpenter.
+  - Azure -> Virtual Machine Scale Sets.
+
+
+- Pod Level to Add and Remove Pods automatically based on the load.
+ - Horizontal Pod Autoscaler (HPA)
+ - Vertical Pod Autoscaler (VPA)
+
+2. What are the dependencies for Horizontal Pod Autoscaler (HPA)?
+A: Horizontal Pod Autoscaler (HPA) depends on 2 things:
+- Metrics Server: Metrics Server is used to get the CPU and Memory usage of the pods.
+- Resource Request: Resource Request should be mentioned in the deployment file to get the CPU and Memory usage of the pods. Its recomanded to provide both requests and limits in the deployment file.
+
+3. What are the different metrics used in Horizontal Pod Autoscaler (HPA)?
+A: We have diff metrics used in Horizontal Pod Autoscaler (HPA):
+- CPU: CPU usage of the pods.
+- Memory: Memory usage of the pods.
+- Netowrk: Network usage of the pods.
+
+4. What will happen if the memory limit is reached in Horizontal Pod Autoscaler (HPA)?
+A: If the memory limit is reached in Horizontal Pod Autoscaler (HPA), the pods will be restarted.
+
+5. What will happen if the CPU limit is reached in Horizontal Pod Autoscaler (HPA)?
+A: If the CPU limit is reached in Horizontal Pod Autoscaler (HPA), the CPU will be throttled which will slow down the application.
+
+6. What is the difference between Horizontal Pod Autoscaler (HPA) and Vertical Pod Autoscaler (VPA)?
+A: HPA add and remove pods based on the load where as VPA will evict the pods based on the load. Means VPA will change the resource request and limits of the pods based on the load and restart the pods which can cause downtime.
+
+7. Who uses HPA or VPA? (or) Does Deployment or StatefulSet (or) DaemonSets uses HPA or VPA?
+
+Not applicable for DaemonSets as they run on all the nodes in the cluster.
+HPA can be applied to Deployment and StatefulSet.
+
+8. Write a manifest file for Horizontal Pod Autoscaler (HPA) with CPU usage?
+      containers:
+      - name: hpa-testing
+        image: sreeharshav/utils:latest
+        #command: ["sh", "-c", "stress --cpu 8 --io 4 --vm 2 --vm-bytes 128M --timeout 10m"]
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 400m
+            memory: "400Mi"
+          requests:
+            cpu: 100m
+            memory: "100Mi"
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-testing
+spec:
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Pods
+        value: 4
+        periodSeconds: 30
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Pods
+        value: 4
+        periodSeconds: 30
+  maxReplicas: 10
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpa-testing
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 50
+
+9. What will happen if the HPA reaches the maxReplicas?
+A: If the HPA reaches the maxReplicas, the pods will be restarted.
+
+
+10. Can I use HPA and VPA together?
+A: Technically, you can use HPA and VPA together but it is not recommended as VPA will evict the pods based on the load which can cause downtime. So, it is recommended to use either HPA or VPA based on the requirement.
+
+11. What is PDB or Pod Disruption Budget?
+A: Pod Disruption Budget (PDB) is used to make sure the pods are not evicted more than the specified number of pods. It is used to make sure the application is available during the maintenance of the nodes. For example if I have 4 PODs for my application, with POD Anti-Affinity and running on 4 worker nodes, I can specify the PDB of 2 which means only 2 PODs can be evicted at a time. If the admin/devops team wants to evict more than 2 PODs or drain node than 2 node, they need to update the PDB to the required number and error is shown if the PDB is not updated.It wont allow node to be drained if the PDB is not updated.
+
+12. How frequently the HPA checks the load?
+By default, HPA checks metrics every 15 seconds. To check metrics, HPA depends on another Kubernetes resource known as the Metrics Server. Metrics Server is used to get the CPU and Memory usage of the pods.
+
+Kubernetes, the default timeframe for scaling down with the Horizontal Pod Autoscaler (HPA) is five minutes.The timeframe can be modified by changing the cluster-level configuration parameter --horizontal-pod-autoscaler-downscale-stabilization-window
+
+13. What are the 3rd party tools for cluster level autoscaling and opmization?
+A: We have 3rd party tools for cluster level autoscaling and optimization:
+- Karpenter: Karpenter is a cluster autoscaler for Kubernetes which is used to add and remove worker nodes automatically based on the load.
+- cast.ai: castai is a cluster autoscaler for Kubernetes which is used to add and remove worker nodes automatically based on the load. It will do security checks and cost optimization for the cluster. Its not free.

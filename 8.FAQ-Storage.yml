@@ -1,0 +1,133 @@
+1. What is PV and PVC (or) what is the difference between Persistent Volume and Persistent Volume Claim?
+A: Persistant Volume(PV) is an abstraction that represents a piece of storage in the cluster. This storage can be that NFS, iSCSI, or cloud-provider-specific storage system EBS, EFS.
+
+2. What are the diff storage types supported by Kubernetes?
+A: There are 4 types of storage supported by Kubernetes:
+   1. EmptyDir => This is a temporary storage that is created when a Pod is assigned to a Node and exists as long as that Pod is running on that node.
+   2. HostPath => Mounting hosts file system where the POD is running.
+   3. Persistent Volume
+   4. We can also mount the Raw Block devices to the POD but not recommended.
+
+3. Write a manifest file for creating a Persistent Volume and Persistent Volume Claim.
+A:
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: aws-pv1
+  labels:
+    type: aws-pv1
+spec:
+  storageClassName: gp2
+  persistentVolumeReclaimPolicy: Delete
+  capacity:
+    storage: 2Gi
+  accessModes:
+  - ReadWriteOnce (or) ReadWriteMany (or) ReadOnlyMany
+  awsElasticBlockStore (or) azureDisk (or) gcePersistentDisk (or) nfs (or) iscsi (or) cinder (or) glusterfs (or) rbd (or) flexVolume (or) cephfs (or) fc (or) quobyte (or) azureFile (or) photonPersistentDisk (or) portworxVolume (or) scaleIO (or) storageos (or) local:
+    volumeID: vol-0ac07ae1a603baf32
+    fsType: ext4
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim1
+spec:
+  storageClassName: gp2
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+4. Is the PV and PVC are namespace specific?
+A: PVC is a namespaced resource while PV is cluster-wide.
+
+5. What are storage classes in Kubernetes?
+A: StorageClass is used to define different classes of storage. It is used by PVC to dynamically provision storage based on the storage class. Its similar to storage types in AWS like gp2, gp3, io1, io2, etc.
+
+Image if you want to use all 4 types of storage in your cluster, then you can define 4 storage classes and use them in PVC.
+
+6. How do you create Storage Class?
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: gp2
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: kubernetes.io/aws-ebs
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+parameters:
+  type: gp2
+  fsType: ext4 
+or 
+parameters:
+  type: io1
+  iopsPerGB: "10"
+  fsType: ext4
+
+7. What is the difference between ReadWriteOnce, ReadWriteMany, and ReadOnlyMany?
+A: ReadWriteOnce: The volume can be mounted as read-write by a single node.
+   Eg: EBS, Azure Disk, GCE Persistent Disk, etc.
+
+   ReadWriteMany: The volume can be mounted as read-write by many nodes.
+    Eg: NFS, CephFS, etc.
+
+   ReadOnlyMany: The volume can be mounted as read-only by many nodes.
+    Eg: NFS, CephFS, etc.
+
+9. What is Dynamic Volume Provisioning or Dynamic Provisioning in Kubernetes?
+A: We can provsion PV in two ways:
+   1. Static Provisioning: In this method, the PV is created manually by the cluster admin and the PVC is created by the developer. We dont want give storage control to the developer.
+
+   2. Dynamic Provisioning: In this method, the developer creates the PVC and the PV is automatically created by the cluster based on the storage class. The challange here is the storage class should support the dynamic provisioning and admin dont have control over the storage. This means if the developer creates a PVC with huge storage, then the storage will be provisioned automatically and impact the cost.
+
+10. I have a K8S Cluster on AWS and I want to enable Dynamic Provisioning for EBS Volumes. But I dont want my developers to create PVC with huge & costly storage. How do you achieve this?
+A: We can achieve this by using the ResourceQuota. We can create a ResourceQuota for the namespace and limit the storage size. So, when the developer creates a PVC with huge storage, the PVC will be rejected by the cluster. 
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: storagequota
+spec:
+  hard:
+    persistentvolumeclaims: "5"
+    requests.storage: "5Gi" # Limit the storage size to 5Gi for all PVCs
+
+The other way is to apply the LimitRange to the namespace. The LimitRange is used to set the min and max values for the PVCs.
+
+From a AWS perspective, we can use service control policies to restrict the storage size and type.
+
+
+11. What is a volumeBindingMode in StorageClass or what is the diff WaitForFirstConsumer and Immediate?
+A: WaitForFirstConsumer: The PV will be bound to the PVC only when the PVC is used by the POD. This is useful when you want to create a PV but dont wantto bind it to the PVC until the POD is created. This is cost-effective as the storage is not provisioned until the POD is created.
+  
+Immediate: The PV will be bound to the PVC as soon as the PVC is created.This isuseful when you want to bind the PV to the PVC as soon as the PVCis created.
+
+12. How do you extend the a PV mounted to a POD? How do you extend a PVC?
+A: Extended PV and PVC involves multiple steps:
+   1. PV should be extended at the storage level. For example, if the PV is an EBS volume, then the EBS volume should be extended.
+   2. Enable the volume expansion feature in the storage class if not enabled as shown below:
+      kubectl patch storageclass gp2 -p '{"allowVolumeExpansion": true}'
+   3. Edit the PVC manifest file and change the size as shown below:
+      resources:
+         requests:
+           storage: 4Gi
+  4. The PVC will be resized automatically and the PV will be resized as well.
+  5. Restart the POD to reflect the new size.
+
+13. Do I need to reboot the POD to reflect the new size of the PVC?
+A: Yes, we need to restart the POD to reflect the new size of the PVC.
+
+14. How can I share a EBS Volume across multiple PODs running on different nodes in diff AZs?
+A: Its not possible to share EBS Volume multiple PODs as its ReadWriteOnce. This can be achieved by using the 3rd party storage solutions like Network File System(NFS), CephFS, etc.
+
+There is also a 3rd party solution called OpenEBS which will allow to replicate the data across the multiple AZ. This can be used to share the data across the multiple PODs across multiple availability zones.
+
+15. What are VolumeClaimTemplates?
+A: VolumeClaimTemplates is used in the StatefulSets to create the PVCs dynamically. This is useful when you want to create multiple PVCs for the multiple replicas of the StatefulSets. 
+Eg: MongoDB or MySQL StatefulSets where you want to create multiple PVCs for the multiple replicas.
+

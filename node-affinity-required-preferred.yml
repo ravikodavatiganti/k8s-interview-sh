@@ -1,0 +1,94 @@
+#https://www.devopsschool.com/blog/understanding-node-selector-and-node-affinity-in-kubernetes/
+requiredDuringSchedulingIgnoredDuringExecution - HARD
+preferredDuringSchedulingIgnoredDuringExecution - SOFT
+
+nodeSelector only selects nodes with all the specified labels. 
+Affinity/anti-affinity gives you more control over the selection logic. You can indicate that a rule is soft or preferred, so that the scheduler still schedules the Pod even if it can't find a matching node.
+
+#Label Nodes Are Per Below.
+ku label node i-0ba8e2be63d7b9634 env=prod application=app1
+ku label node i-0d191fc4382e1fc72 env=prod application=app2
+ku label node i-008c11884a2ee46a8 env=dev application=app3
+ku label node i-0153e5a09ff6f3d88 env=dev application=app4
+
+You can see the operator In being used in the example. 
+The new node affinity syntax supports the following operators: In, NotIn, Exists, DoesNotExist, Gt, Lt. 
+You can use NotIn and DoesNotExist to achieve node anti-affinity behavior, or use node taints to repel pods from specific nodes.
+
+#Manifest for node-affinity-required. To avoid Application Downtime we can use Pod Disruption Budget.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx001
+  name: nginx001
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: nginx001
+  template:
+    metadata:
+      labels:
+        app: nginx001
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: env
+                operator: In
+                values:
+                - prod
+                - dev
+              - key: application
+                operator: In
+                values:
+                - app1
+                - app4
+      containers:
+      - image: nginx:latest
+        name: nginx
+
+#Manifest for node-affinity-preferred
+kubectl get pods -o wide --no-headers | grep  -v -E 'i-0d191fc4382e1fc72|i-0ba8e2be63d7b9634' | wc -l
+kubectl get pods -o wide --no-headers | grep  -E 'i-0d191fc4382e1fc72|i-0ba8e2be63d7b9634' | wc -l
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx002
+  name: nginx002
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: nginx002
+  template:
+    metadata:
+      labels:
+        app: nginx002
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: env
+                operator: In
+                values:
+                - prod
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: env
+                operator: In
+                values:
+                - dev
+      containers:
+      - image: nginx:latest
+        name: nginx

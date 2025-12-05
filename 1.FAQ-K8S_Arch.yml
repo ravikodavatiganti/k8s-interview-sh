@@ -1,0 +1,66 @@
+1.Explain the architecture of Kubernetes? (or) what are diff components of Kubernetes?
+- Control Plane Components
+- Data Plane or Worker Nodes
+
+2. Scenario: Deploy a simple web application on Kubernetes cluster with 3 replicas of the application.
+kubectl create deployment webapp --image=nginx --replicas=3
+Components of Control Plane:
+- API Server => Single Point of Contact for all the components of the cluster and also  
+                admin to interact with the cluster.
+- Scheduler  => It schedules the workloads to the worker nodes based on the resources  
+                available based on the constraints like affinity, anti-affinity, tainted nodes, etc.
+- Controller Manager => It runs the controllers which are responsible for the actual  
+                        state of the cluster to the desired state.
+                        - Node Controller
+                        - Replication Controller
+                        - Endpoints Controller
+                        - Service Account & Token Controller
+
+- etcd => Distributed Key-Value Store encryped by TLS and accessible only by the API    
+          Server.
+
+3. What is the other things apart from the Control Plane Components?
+A: We have kubelet and kube-proxy running on the worker nodes and control/master nodes.
+
+4. What is diff between kubelet and other components?
+A: APIServer, Scheduler, Controller Manager, ETCD and kube-proxy are running as PODs.  
+   But kubelet is running as a service on the worker and control nodes. Means kubelet is
+   service similar to docker service or sshd service.
+
+5. What is the role of kubelet (or) Who deploys the PODs?
+A: Kubelet is responsible for deploying the PODs on the worker nodes. It takes the POD  
+   definition from the API Server and deploys the PODs on the worker nodes.
+
+6. What is the role of kube-proxy?
+A: Kube-proxy is responsible for the networking in the cluster. It maintains the network  rules on the worker nodes and also responsible for the load balancing. This can be done by IPTables. Means if someone tries to access the service, kube-proxy will redirect the request to the appropriate POD.
+
+7. What is the container runtime used by Kubernetes?
+A: K8S supports multiple container runtimes like Docker, Containerd, CRI-O, etc.
+From version 1.20, Docker is deprecated and containerd is the default container runtime.
+Docker can run and manage container which is large in size. Due to that they have removed containerd and containerd is lightweight and can run only container wthout any mgmt features.
+
+There are other K8S flavors like Rancher Kubernetes Engine (RKE), K3S, etc. which uses containerd or Docker as the default container runtime.
+
+8. What is the role of CNI in Kubernetes?
+A: By default, K8S doesn't have any networking solution. So, we need to install the CNI plugin to provide the networking solution. CNI is a standard for the container networking. It provides the networking solution to the PODs in the cluster. There are multiple CNI plugins available like Calico, Flannel, Weave, etc. IF we use AWS EKS, it uses AWS VPC CNI plugin and in Azure AKS, it uses Azure CNI plugin.
+
+9. Who is providing IP address to the PODs?
+A: CNI plugin is responsible for providing the IP address to the PODs. It assigns the IP address to the PODs from the subnet provided by the CNI plugin.
+
+10. What is the role of kube-scheduler?
+A: Kube-scheduler is responsible for scheduling the workloads to the worker nodes based on the resources available and constraints like affinity, anti-affinity, taints, etc. It schedules the PODs to the worker nodes based on the resources available on the worker nodes.
+
+11. What are the default namespaces in Kubernetes?
+A: kube-system => All the K8S components are running in this namespace.
+   default => If we don't specify the namespace, PODs will be created in the default namespace.
+   kube-public => This namespace is used to store the public information of the cluster.
+   kube-node-lease => This namespace is used to store the heartbeat of the nodes.
+
+12. What is a Namespace in Kubernetes and what is the use of it?
+A: By default namespace dont provide network isolation. To get Network isolation, we need to use Network Policy. Network Policy is a resource in K8S which is used to provide the network isolation to the PODs in the cluster at POD level and namespace level.
+
+13. Does two PODs in different namespaces can communicate with each other (or) How to communicate between the PODs in different namespaces?
+A: By default PODs in different namespaces can communicate with each other with IP address. In general we dont do in that way. PODs are exposed using the services. So, we need to create the service with the type ClusterIP and then we can access the PODs in different namespaces.
+
+14. What will happen if kubelet is down on the worker node?
+A: If kubelet is down on the worker node, then the PODs on that worker node will be in the NotReady state. The kubelet is responsible for deploying the PODs on the worker nodes. If kubelet is down, then the PODs will not be deployed on the worker nodes. The replication controller will try to deploy the PODs on the worker nodes but it will not be successful. To resolve this issue, we need to restart the kubelet service on the worker node or we need to restart the worker node and if it is still not working, then we can drain the node for further investigation.

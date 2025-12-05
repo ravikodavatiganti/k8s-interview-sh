@@ -1,0 +1,143 @@
+1. What is the least primitive object in Kubernetes?
+A: POD => ReplicaSet => Deployment/DaemonSet/StatefulSet => Service
+Based on this the lowest primitive object in K8S is POD.
+
+2. How many contaniners I can run in a POD?
+A: We can run n number of containers in a POD and it depends on the resources available on the worker nodes.
+
+3. How to check the IP Address of the PODs and the node its running?
+A: kubectl get pods -o wide
+
+4. What is the diffrence between ReplicaSet & Deployment?
+A: The main responsibility of ReplicaSet is to maintain the desired number of PODs in the cluster. It doesn't provide the rolling updates, rollback, image updates, etc. 
+
+Deployment create replicaset as part of execution. Deployment provides the rolling updates, rollback, etc. Deployment is more advanced than ReplicaSet.
+
+5. What are the diffrent ways you can reboot a POD?
+A: We can reboot the POD in the following ways:
+- Delete the POD: kubectl delete pod POD_NAME
+- Restart the POD: kubectl rollout restart deployment app1
+- Scale the POD Down and Up: kubectl scale deployment app1 --replicas=0
+- Add the annotation or Env to the POD
+
+3. What is a sidecar in Kubernetes?
+A: Sidecar is a design pattern in K8S where we run an additional container in the same POD to provide additional functionality to the main container. For example, we can run a logging container in the same POD to collect the logs of the main container.
+
+We can additional containers in the same POD along with the main container. This is called as Sidecar pattern and we have 3 patterns in K8S.
+- Init Container:
+  - They always starts before the main container and completes the task and then main 
+    container starts.
+  - We can have multiple init containers in the same POD.
+  - All the init containers should complete successfully before the main container    
+    starts.
+  - Init Container executes in a sequential order. For example the second init container 
+    will start only after the first init container completes.
+  - Init Container is used to perform the initialization tasks like downloading the 
+    configuration files, checking DB connectivity, checking the storage, etc.
+
+- Adapter Container:
+  - Adapter container runs along with the main container and provides the additional 
+    functionality to the main container.
+  - Example: 
+    - Istio-proxy container runs along with the main container to provide the 
+      service mesh functionality to the main container.
+    - Logging container runs along with the main container to collect the logs of the 
+      application running in the main container.
+    - Backup container runs along with the main container to take the backup of the 
+      application/DB running in the main container.
+
+- Ambassador Container => Mostly used as Proxy container.
+
+4. How do you check the logs of the POD?
+A: kubectl logs POD_NAME
+
+5: How to check logs of a POD which contain 4 containers named as main, sidecar1, sidecar2, sidecar3? How can I check the logs of sidecar2 container?
+A: kubectl logs POD_NAME -c sidecar2
+   To get latest logs use -f option.
+
+6. How to check the logs of the POD which is already deleted (or) How to check logs of the POD which is restarted?
+kubectl logs POD_NAME --previous
+
+7. How to check the logs of the POD which is running in the different namespace?
+kubectl logs POD_NAME -n NAMESPACE
+
+8. How can I copy a file to a running container/Pod?
+A: kubectl cp /path/to/file POD_NAME:/path/to/file
+
+9. What is the difference between kubectl create and kubectl apply?
+A: kubectl create => It creates the resource in the cluster. If the resource already 
+   exists, it will throw an error. Its imperative way of creating the resource.
+   kubectl create deployment app1 --image sreeharshav/fastapi:laest --replicas 3
+
+   kubectl apply => It creates the resource in the cluster using declarative YAML/JSON file. If the resource already exists, it will update the resource with the new configuration. Its declarative way of creating the resource.
+   kubectl create -f file.yml
+
+10. How to go inside the POD and execute the commands?
+A: kubectl exec -it POD_NAME -- /bin/bash
+   kubectl exec -it POD_NAME -c CONTAINER_NAME -- /bin/bash
+
+11. Image there are two containers in a POD. How they communicate with each other?
+A: Containers in the same POD share the network namespace. So, they can communicate with 
+   each other using localhost. This is possible because the container in the same POD dont work on same port.
+
+12. I have two containers in a POD. What will be the IP address of the containers?
+A: Both the containers in the same POD will have the same IP address. POD is the smallest unit in K8S and it shares the network namespace. So, both the containers in the same POD will have the same IP address.
+
+13. What is the difference between ReplicaSet and ReplicationController?
+A: ReplicaSet is the next generation of ReplicationController. ReplicaSet is more advanced than ReplicationController. Both maintain the desired state of the PODs in the cluster. 
+
+ReplicationController(OLD): It uses equality-based selectors to replicate the PODs. It doesn't support the set-based selectors.
+Eg: nodeSelector:
+      accelerator: nvidia-tesla-p100
+
+ReplicaSet(NEW): It uses set-based selectors to replicate the PODs. It supports both equality-based and set-based selectors.
+Eg: 
+selector:
+  matchLabels:
+    component: redis
+  matchExpressions:
+    - { key: tier, operator: In, values: [cache] }
+    - { key: environment, operator: NotIn, values: [dev] }
+
+14. What is the difference between Deployment, DaemonSet, StatefulSet?
+A: Deployment => It is used to deploy the stateless applications in the cluster. It is used to manage the PODs which are stateless in nature like frontend and backend. It provides the rolling updates, rollback, scaling, etc. It is used to manage the stateless applications in the cluster. Everytime pods are recreated the name of the pod will be changed. This is suitable for stateless applications and scaling is done by increasing the number of replicas as per the requirement.
+Eg: Frontend, Backend, etc.
+
+DaemonSet => It will make sure run one POD on each node for sure. Image if you have 3 nodes, then 3 PODs will be created. If you add one more node, then one more POD will be created automatically. This is suitable for monitoring agents, logging agents, etc. which should run on each node in the cluster.
+
+StatefulSet => It is used to deploy the stateful applications in the cluster. It is used to manage the PODs which are stateful in nature like DB, Kafka, etc.
+- StatefulSet provides the stable network identity to the PODs. Means if the POD is recreated, it will have the same POD name.
+Eg: mongo0, mongo1, mongo2, etc.
+- PODs starts in a sequential order. Means mongo1 will start only after mongo0 starts.
+- Even the POD is rebooted it will be assigned same volume.
+- SS needs Headless Service to provide the DNS name to the PODs.
+
+
+15. How to deploy a POD in specific node?
+A: We can use nodeSelector to deploy the POD in the specific node.
+Eg:
+nodeSelector:
+  kubernetes.io/hostname: i-04902c10928382c11
+
+If you want to target group of nodes, then use NodeAffinity or Taints and Tolerations.
+
+16. How do I what are the diff types of resource in K8S?
+A: kubectl api-resources
+
+17. How do you add a new node to the existing cluster?
+A: Depends on the Cluster type. 
+If it is managed cluster like EKS, GKE, AKS, etc. then we can add the node using the console or increase the number of nodes in the terraform script. 
+
+If it is self managed cluster, then we need to add the node to the cluster using the kubeadm join command.
+
+If its a KOPS cluster, edit the cluster and increase the number of nodes.
+
+18. What is you Tech Stack (or) Application Stack?
+A: My whole applcation is deployed on AWS/Azure/GCP. We use almost all the core services as part this application.
+Its a microservice based app running on Managed K8S EKS/AKS/GKE. 
+Frontend is Angular/React and Backend is FastAPI/Flask/Django/SpringBoot.
+We have two types of DBs. One is RDS/AzureSQL for User Authentication and for applcation data we employ NoSQL DynamoDB/CosmosDB/MongoDB. Mongo is running as statefulset in K8S.
+
+Apart from that Redis is used for caching and ElasticSearch is used for searching.
+Monitoring is done using Prometheus/Grafana and Logging is done using EFK Stack.
+Other Cloud Resources like S3, SQS, SNS, etc are used for other functionalities.CloudTrail is used for auditing and Config is used for compliance.

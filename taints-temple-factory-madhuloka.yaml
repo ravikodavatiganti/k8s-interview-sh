@@ -1,0 +1,81 @@
+kubectl taint node i-0c246649fcec26a43   perf=high:NoExecute
+kubectl taint node i-012f25ff6c526c8da   perf=medium:NoExecute
+kubectl taint node i-0ddc22f69af1a427c   perf=low:NoExecute
+
+kubectl taint node i-0c246649fcec26a43   perf=high:NoSchedule
+kubectl taint node i-012f25ff6c526c8da   perf=high:NoSchedule
+kubectl taint node i-0ddc22f69af1a427c   perf=high:NoSchedule
+kubectl taint node i-0c246649fcec26a43   perf-
+kubectl taint node i-012f25ff6c526c8da   perf-
+kubectl taint node i-0ddc22f69af1a427c   perf-
+
+#For Checking The Taints
+for node in $(ku get no --no-headers  | cut -d " " -f 1)
+do 
+ku describe node $node | grep -i taint
+done
+#For Removing The Taints
+for node in $(ku get no --no-headers  | cut -d " " -f 1)
+do 
+kubectl taint node $node perf-
+done
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myapp2
+  name: myapp2
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp2
+  template:
+    metadata:
+      labels:
+        app: myapp2
+    spec:
+      containers:
+      - image: sreeharshav/rollingupdate:v5
+        name: rollingupdate
+      tolerations:
+      - key: "perf"
+        operator: "Equal"
+        value: "high"
+        effect: "NoExecute"
+      - key: "perf"
+        operator: "Equal"
+        value: "low"
+        effect: "NoExecute"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myapp1
+    owner: javateam
+  name: myapp1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: myapp1
+      owner: javateam
+  template:
+    metadata:
+      labels:
+        app: myapp1
+        owner: javateam
+    spec:
+      containers:
+      - image: sreeharshav/rollingupdate:v5
+        name: rollingupdate
+      tolerations:
+         - key: "perf"
+           operator: "Equal"
+           value: "high"
+           effect: "NoSchedule"
+

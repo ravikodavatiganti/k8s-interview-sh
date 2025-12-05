@@ -1,0 +1,61 @@
+1. What are probes in Kubernetes (or) How do you check the health of a container in Kubernetes (or) How do you autoheal a container in Kubernetes?
+A: Probes are used to check the health of a container in Kubernetes. 
+
+2. What are the different types of probes in Kubernetes?
+A: We have 3 types of probes in Kubernetes:
+- Liveness probe: Indicates whether the container is running.
+- Readiness probe: Indicates whether the container is ready to serve traffic.
+- Startup probe: Indicates whether the application within the container is started.
+
+3. Probes uses 3 different types of checks to determine the health of a container. What are they?
+A: 
+- httpGet: Sends an HTTP GET request to the specified path on the container.
+- tcpSocket: Opens a socket to the specified port on the container.
+- exec: Executes the specified command inside the container.
+
+4. What is difference between Liveness and Readiness probe?
+A: Both Liveiness and Readiness probes are used to check the health of a container. The difference is:
+- Liveness probe: Indicates whether the container is running and restarts the container if it fails.
+- Readiness probe: Indicates whether the container is ready to serve traffic and stops sending traffic to the container if it fails. This is especially useful in rolling updates which needs buffer time to make sure the new version of the application is ready to serve traffic.
+
+5. Can we use Liveness and Readiness probes together?
+A: Yes, we can use both Liveness and Readiness probes together. But we need to make sure a time difference between the two probes. The Readiness probe should be checked first and then the Liveness probe. If you give same time for both probes, the Liveness probe will restart the container before the Readiness probe is checked.
+
+6. What is the use of Startup probe?
+A: Startup probe is used if its a legacy application which takes time to start. It is used to check if the application is started within the specified time. The Liveiness and Readiness probes are started only after the Startup probe is successful.
+
+7. What is initialDelaySeconds in probes?
+A: initialDelaySeconds is the time to wait before starting the probe. It is used to give some time for the container to start before checking the health of the container.
+
+8. Are probes are at container level or pod level?
+A: Probes are at container level. We can have different probes for different containers in a pod.
+
+      containers:
+      - name: nginx
+        image: sreeharshav/testcontainer:v1
+        ports:
+        - containerPort: 80
+        readinessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            httpGet:
+                path: /
+                port: 80
+        livenessProbe:
+            initialDelaySeconds: 45
+            periodSeconds: 5
+            timeoutSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+            httpGet:
+                path: /
+                port: 80
+        startupProbe:
+            failureThreshold: 6
+            periodSeconds: 20
+            httpGet:
+                path: /
+                port: 80
